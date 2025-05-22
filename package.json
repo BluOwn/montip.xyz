@@ -1,0 +1,87 @@
+{
+  "name": "montip",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A decentralized tipping platform built on the Monad Network",
+  "author": "MonTip Team",
+  "license": "MIT",
+  "homepage": "https://montip.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/montip.git"
+  },
+  "keywords": [
+    "web3",
+    "cryptocurrency",
+    "tipping",
+    "monad",
+    "blockchain",
+    "decentralized",
+    "react",
+    "typescript"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "postbuild": "echo '/* /index.html 200' > dist/_redirects && cp vercel.json dist/ 2>/dev/null || true",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.vite",
+    "test": "echo \"No tests specified\" && exit 0",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "deploy": "npm run build && vercel --prod"
+  },
+  "dependencies": {
+    "clsx": "^2.1.0",
+    "ethers": "^6.13.2",
+    "lucide-react": "^0.445.0",
+    "react": "^18.3.1",
+    "react-copy-to-clipboard": "^5.1.0",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.3.0",
+    "react-router-dom": "^6.26.2",
+    "tailwindcss": "^3.4.10"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/node": "^22.5.5",
+    "@types/react": "^18.3.21",
+    "@types/react-copy-to-clipboard": "^5.0.7",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "postcss": "^8.4.47",
+    "typescript": "~5.8.3",
+    "typescript-eslint": "^8.30.1",
+    "vite": "^6.3.5",
+    "vite-bundle-analyzer": "^0.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}
