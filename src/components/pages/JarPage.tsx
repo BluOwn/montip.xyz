@@ -338,19 +338,19 @@ export const JarPage: React.FC = () => {
 
                {socialLinks.length > 0 && (
                  <div className="mt-6 flex flex-wrap gap-3">
-                   {socialLinks.map((link) => {
-                     const formatted = formatSocialLink(link);
-                     return (
-                       
-                         key={link.id}
-                         href={formatted.url}
-                         target="_blank"
-                         rel="noopener noreferrer"
-                         className="inline-flex items-center px-4 py-2 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors text-sm"
-                       >
-                         {getPlatformIcon(link.platform)}
-                         <span className="ml-2">{formatted.label}</span>
-                       </a>
+{socialLinks.map((link) => {
+  const formatted = formatSocialLink(link);
+  return (
+    <a
+      key={link.id}
+      href={formatted.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center px-4 py-2 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors text-sm"
+    >
+      {getPlatformIcon(link.platform)}
+      <span className="ml-2">{formatted.label}</span>
+    </a>
                      );
                    })}
                  </div>
