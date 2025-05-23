@@ -38,6 +38,9 @@ import {
   Youtube,
   Github,
   Linkedin,
+  Search,
+  Plus,
+  Heart,
 } from "lucide-react"
 
 export const JarPage: React.FC = () => {
@@ -231,33 +234,60 @@ export const JarPage: React.FC = () => {
    return (
      <div className="bg-gradient-to-b from-violet-50 to-white min-h-screen py-16">
        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-         <Card className="border-0 rounded-xl shadow-lg overflow-hidden">
+         <Card className="border-0 rounded-xl shadow-lg overflow-hidden max-w-2xl mx-auto">
            <div className="h-2 bg-gradient-to-r from-violet-500 to-indigo-500"></div>
            <CardContent className="p-8">
              <div className="text-center py-8">
                <div className="flex justify-center mb-6">
-                 <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center">
-                   <AlertTriangle className="text-red-500 w-10 h-10" />
+                 <div className="h-20 w-20 rounded-full bg-violet-100 flex items-center justify-center">
+                   <Search className="text-violet-500 w-10 h-10" />
                  </div>
                </div>
-               <h3 className="text-xl font-bold text-red-600 mb-4">Tip Jar Not Found</h3>
-               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                 {jarError || "This tip jar doesn't exist or has been deleted."}
+               <h3 className="text-2xl font-bold text-gray-900 mb-4">Tip Jar Not Found</h3>
+               <p className="text-gray-600 mb-2 text-lg">
+                 The tip jar <span className="font-semibold text-violet-600">@{username}</span> doesn't exist or may have been deleted.
                </p>
+               <p className="text-gray-500 mb-8 text-sm">
+                 Double-check the username or try searching for a different tip jar.
+               </p>
+               
+               <div className="bg-violet-50 rounded-lg p-6 mb-8">
+                 <div className="flex items-center justify-center mb-4">
+                   <Heart className="text-violet-500 w-6 h-6 mr-2" />
+                   <span className="text-violet-700 font-medium">Want to create your own tip jar?</span>
+                 </div>
+                 <p className="text-violet-600 text-sm mb-4">
+                   Start receiving tips from your audience in just a few minutes!
+                 </p>
+                 <Link to="/dashboard">
+                   <Button className="rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200">
+                     <Plus className="w-4 h-4 mr-2" />
+                     Create Your Tip Jar
+                   </Button>
+                 </Link>
+               </div>
+               
                <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-3">
+                 <Button
+                   onClick={() => navigate(-1)}
+                   variant="outline"
+                   className="rounded-full border-violet-200 hover:bg-violet-50 hover:border-violet-300 transition-all duration-200"
+                 >
+                   <ArrowLeft className="w-4 h-4 mr-2" />
+                   Go Back
+                 </Button>
                  <Button
                    onClick={() => navigate("/")}
                    variant="outline"
                    className="rounded-full border-violet-200 hover:bg-violet-50 hover:border-violet-300 transition-all duration-200"
                  >
-                   <ArrowLeft className="w-4 h-4 mr-2" />
-                   Go Home
+                   <span>Home</span>
                  </Button>
                  <Button
                    onClick={() => navigate("/leaderboard")}
                    className="rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200"
                  >
-                   View Leaderboard
+                   View All Tip Jars
                  </Button>
                </div>
              </div>
@@ -301,32 +331,31 @@ export const JarPage: React.FC = () => {
                  </div>
                </div>
              </CardHeader>
-<CardContent className="p-6">
-  <div className="prose max-w-none">
-    <p className="text-gray-700">{jar.description}</p>
-  </div>
+             <CardContent className="p-6">
+               <div className="prose max-w-none">
+                 <p className="text-gray-700">{jar.description}</p>
+               </div>
 
-  {socialLinks.length > 0 && (
-    <div className="mt-6 flex flex-wrap gap-3">
-      {socialLinks.map((link) => {
-        const formatted = formatSocialLink(link);
-        return (
-          <a
-            key={link.id}
-            href={formatted.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center px-4 py-2 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors text-sm"
-          >
-            {getPlatformIcon(link.platform)}
-            <span className="ml-2">{formatted.label}</span>
-          </a>
-        );
-      })}
-    </div>
-  )}
-</CardContent>
-
+               {socialLinks.length > 0 && (
+                 <div className="mt-6 flex flex-wrap gap-3">
+                   {socialLinks.map((link) => {
+                     const formatted = formatSocialLink(link);
+                     return (
+                       
+                         key={link.id}
+                         href={formatted.url}
+                         target="_blank"
+                         rel="noopener noreferrer"
+                         className="inline-flex items-center px-4 py-2 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors text-sm"
+                       >
+                         {getPlatformIcon(link.platform)}
+                         <span className="ml-2">{formatted.label}</span>
+                       </a>
+                     );
+                   })}
+                 </div>
+               )}
+             </CardContent>
 
              <CardFooter className="bg-gray-50 p-6">
                {isOwnJar ? (
@@ -586,8 +615,7 @@ export const JarPage: React.FC = () => {
                    <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                    <span>
                      You need a Web3 wallet to send tips. We recommend{" "}
-                     
-                       <a href={METAMASK_DOWNLOAD_URL}
+                     <a href={METAMASK_DOWNLOAD_URL}
                        target="_blank"
                        rel="noopener noreferrer"
                        className="text-violet-600 hover:text-violet-800 underline"

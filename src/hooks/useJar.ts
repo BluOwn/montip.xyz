@@ -44,13 +44,25 @@ export const useJar = (initialUsername?: string): UseJarReturn => {
           exists: true,
         });
       } else {
-        setError(`Tip jar @${username} doesn't exist or has been deleted`);
+        setError('not_found');
         setJar(null);
       }
     } catch (err: unknown) {
       console.error('Error fetching jar:', err);
-      const formattedError = formatContractError(err as Error);
-      setError(formattedError.message || 'Failed to fetch jar');
+      
+      // Handle specific contract errors
+      if (err instanceof Error) {
+        if (err.message.includes('Jar not exist') || 
+            err.message.includes('execution reverted') ||
+            err.message.includes('CALL_EXCEPTION')) {
+          setError('not_found');
+        } else {
+          const formattedError = formatContractError(err as Error);
+          setError(formattedError.message || 'Failed to fetch jar');
+        }
+      } else {
+        setError('Failed to fetch jar');
+      }
       setJar(null);
     } finally {
       setIsLoading(false);
@@ -88,7 +100,11 @@ export const useJar = (initialUsername?: string): UseJarReturn => {
       return jarInfo[0] === ethers.ZeroAddress;
     } catch (err) {
       console.error('Error checking username availability:', err);
-      if (err instanceof Error && err.message.includes("execution reverted")) {
+      if (err instanceof Error && (
+        err.message.includes("execution reverted") ||
+        err.message.includes("Jar not exist") ||
+        err.message.includes("CALL_EXCEPTION")
+      )) {
         return true;
       }
       return false;
