@@ -31,7 +31,7 @@ interface JarData {
   username: string
   totalReceived: number
   rank?: number
-  createdAt?: number // We'll use index as a proxy for creation order
+  createdAt: number // We'll use index as a proxy for creation order
 }
 
 type SortOption = 'tips_desc' | 'tips_asc' | 'newest' | 'oldest'
@@ -165,10 +165,10 @@ export const Leaderboard: React.FC = () => {
         sortedJars.sort((a, b) => a.totalReceived - b.totalReceived)
         break
       case 'newest':
-        sortedJars.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        sortedJars.sort((a, b) => b.createdAt - a.createdAt)
         break
       case 'oldest':
-        sortedJars.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        sortedJars.sort((a, b) => a.createdAt - b.createdAt)
         break
     }
     
