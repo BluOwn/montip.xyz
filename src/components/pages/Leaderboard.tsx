@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card"
 import { Button } from "@/components/common/Button"
 import { Spinner } from "@/components/common/Spinner"
@@ -35,48 +35,76 @@ export const Leaderboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [debugInfo, setDebugInfo] = useState<string>("")
   const pageSize = LEADERBOARD_PAGE_SIZE
+  const isFetchingRef = useRef(false)
 
   const fetchAllJars = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log("Already fetching, skipping...")
+      return
+    }
+    
+    isFetchingRef.current = true
     setIsLoading(true)
     setError(null)
+    setDebugInfo("Starting fetch...")
     
     try {
       const contract = getReadOnlyContract()
+      console.log("Contract instance:", contract.address)
       
-      // Get all usernames from the contract
+      // Get all usernames from the contract with retries
       const allUsernames: string[] = []
       let index = 0
+      let consecutiveErrors = 0
+      const maxConsecutiveErrors = 3
       
-      while (true) {
+      while (consecutiveErrors < maxConsecutiveErrors) {
         try {
           const username = await contract.allUsernames(index)
           if (username && username.length > 0) {
             allUsernames.push(username)
+            console.log(`Found username at index ${index}:`, username)
             index++
+            consecutiveErrors = 0 // Reset error counter on success
           } else {
-            break
+            consecutiveErrors++
           }
         } catch (err) {
-          // Reached the end of the array
-          break
+          consecutiveErrors++
+          console.log(`Error at index ${index}, consecutive errors: ${consecutiveErrors}`)
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.log("Reached max consecutive errors, stopping username fetch")
+            break
+          }
         }
       }
 
+      console.log(`Total usernames found: ${allUsernames.length}`)
+      setDebugInfo(`Found ${allUsernames.length} usernames`)
+
       if (allUsernames.length === 0) {
+        console.log("No usernames found")
         setAllTippedJars([])
         setDisplayedJars([])
+        isFetchingRef.current = false
         return
       }
 
-      // Fetch all jar info in parallel
+      // Fetch jar info with better error handling
       const jarPromises = allUsernames.map(async (username) => {
         try {
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 50))
+          
           const jarInfo = await contract.getJarInfo(username)
           const exists = jarInfo[0] !== ethers.ZeroAddress
           
           if (exists) {
             const totalReceived = Number.parseFloat(ethers.formatEther(jarInfo[2]))
+            console.log(`Jar ${username}: ${totalReceived} MON`)
             
             // Only return jars that have received tips
             if (totalReceived > 0) {
@@ -89,6 +117,7 @@ export const Leaderboard: React.FC = () => {
           return null
         } catch (err) {
           console.error(`Error fetching jar info for ${username}:`, err)
+          // Return null instead of throwing to continue with other jars
           return null
         }
       })
@@ -104,6 +133,9 @@ export const Leaderboard: React.FC = () => {
           rank: index + 1
         }))
 
+      console.log(`Total tipped jars: ${tippedJars.length}`)
+      setDebugInfo(`Found ${allUsernames.length} usernames, ${tippedJars.length} have tips`)
+
       setAllTippedJars(tippedJars)
       
       // Display first page
@@ -114,17 +146,31 @@ export const Leaderboard: React.FC = () => {
     } catch (err: any) {
       console.error("Error fetching jars:", err)
       setError(err.message || "Failed to fetch jars")
+      setDebugInfo(`Error: ${err.message}`)
       setAllTippedJars([])
       setDisplayedJars([])
     } finally {
       setIsLoading(false)
+      isFetchingRef.current = false
     }
   }, [])
 
-  // Initial load
+  // Initial load - ensure it only runs once
   useEffect(() => {
-    fetchAllJars()
-  }, [fetchAllJars])
+    let mounted = true
+    
+    const loadData = async () => {
+      if (mounted && !isFetchingRef.current) {
+        await fetchAllJars()
+      }
+    }
+    
+    loadData()
+    
+    return () => {
+      mounted = false
+    }
+  }, []) // Remove fetchAllJars from dependencies to prevent re-runs
 
   const handleLoadMore = () => {
     const nextPage = page + 1
@@ -134,6 +180,13 @@ export const Leaderboard: React.FC = () => {
     
     setDisplayedJars(nextJars)
     setPage(nextPage)
+  }
+
+  const handleRefresh = async () => {
+    // Clear existing data before refresh
+    setAllTippedJars([])
+    setDisplayedJars([])
+    await fetchAllJars()
   }
 
   const hasMore = displayedJars.length < allTippedJars.length
@@ -159,6 +212,7 @@ export const Leaderboard: React.FC = () => {
             <div className="text-center">
               <Spinner size="lg" className="text-violet-600" />
               <p className="mt-6 text-lg text-gray-600">Loading top tip jars...</p>
+              <p className="mt-2 text-sm text-gray-500">{debugInfo}</p>
             </div>
           </div>
         </div>
@@ -179,9 +233,10 @@ export const Leaderboard: React.FC = () => {
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-red-600 mb-3">Error Loading Leaderboard</h3>
-                <p className="text-gray-600 mb-8 max-w-md mx-auto">{error}</p>
+                <p className="text-gray-600 mb-2 max-w-md mx-auto">{error}</p>
+                <p className="text-sm text-gray-500 mb-8">{debugInfo}</p>
                 <Button
-                  onClick={() => fetchAllJars()}
+                  onClick={handleRefresh}
                   className="px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200"
                 >
                   Try Again
@@ -224,7 +279,8 @@ export const Leaderboard: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={fetchAllJars}
+                onClick={handleRefresh}
+                disabled={isLoading}
                 className="text-violet-600 hover:text-violet-700"
               >
                 Refresh
@@ -267,7 +323,7 @@ export const Leaderboard: React.FC = () => {
                     <tbody className="divide-y divide-gray-100">
                       {displayedJars.map((jar) => (
                         <tr
-                          key={jar.username}
+                          key={`${jar.username}-${jar.rank}`}
                           className={`hover:bg-violet-50 transition-colors ${jar.rank && jar.rank <= 3 ? "bg-violet-50" : ""}`}
                         >
                           <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-center">
@@ -343,12 +399,23 @@ export const Leaderboard: React.FC = () => {
                     <Trophy className="text-violet-500 w-8 h-8" />
                   </div>
                 </div>
-                <p className="text-gray-600 mb-6 text-lg">No tip jars with tips found</p>
-                <Link to="/dashboard">
-                  <Button className="px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200">
-                    Create a Tip Jar
+                <p className="text-gray-600 mb-2 text-lg">No tip jars with tips found</p>
+                <p className="text-sm text-gray-500 mb-6">{debugInfo}</p>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleRefresh}
+                    variant="outline"
+                    className="px-6 py-2 rounded-full border-2 border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200"
+                  >
+                    Refresh Page
                   </Button>
-                </Link>
+                  <br />
+                  <Link to="/dashboard">
+                    <Button className="px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200">
+                      Create a Tip Jar
+                    </Button>
+                  </Link>
+                </div>
               </div>
             )}
           </CardContent>
