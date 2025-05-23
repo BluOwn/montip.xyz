@@ -106,9 +106,12 @@ export const Leaderboard: React.FC = () => {
       // Sort jars by totalReceived in descending order
       validJars.sort((a, b) => b.totalReceived - a.totalReceived)
 
+      // Filter to only show jars that have received tips (totalReceived > 0)
+      const tippedJars = validJars.filter(jar => jar.totalReceived > 0)
+
       // Apply pagination
       const offset = (pageNumber - 1) * pageSize
-      const paginatedJars = validJars.slice(offset, offset + pageSize)
+      const paginatedJars = tippedJars.slice(offset, offset + pageSize)
 
       const jarsData: JarData[] = paginatedJars.map((jar, index) => ({
         username: jar.username,
@@ -123,7 +126,7 @@ export const Leaderboard: React.FC = () => {
       }
 
       // Check if there are more jars to load
-      setHasMore(offset + paginatedJars.length < validJars.length)
+      setHasMore(offset + paginatedJars.length < tippedJars.length)
     } catch (err: any) {
       console.error("Error fetching jars:", err)
       setError(err.message || "Failed to fetch jars")
@@ -351,10 +354,10 @@ export const Leaderboard: React.FC = () => {
                     <Trophy className="text-violet-500 w-8 h-8" />
                   </div>
                 </div>
-                <p className="text-gray-600 mb-6 text-lg">No tip jars found</p>
+                <p className="text-gray-600 mb-6 text-lg">No tip jars with tips found</p>
                 <Link to="/dashboard">
                   <Button className="px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200">
-                    Create the First Tip Jar
+                    Create a Tip Jar
                   </Button>
                 </Link>
               </div>
