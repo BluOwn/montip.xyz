@@ -21,21 +21,30 @@ import {
   MessageSquare,
   Heart,
   Calendar,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter,
 } from "lucide-react"
 
 interface JarData {
   username: string
   totalReceived: number
   rank?: number
+  createdAt?: number // We'll use index as a proxy for creation order
 }
 
+type SortOption = 'tips_desc' | 'tips_asc' | 'newest' | 'oldest'
+
 export const Leaderboard: React.FC = () => {
-  const [allTippedJars, setAllTippedJars] = useState<JarData[]>([])
+  const [allJars, setAllJars] = useState<JarData[]>([])
   const [displayedJars, setDisplayedJars] = useState<JarData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [debugInfo, setDebugInfo] = useState<string>("")
+  const [sortBy, setSortBy] = useState<SortOption>('tips_desc')
+  const [showFilters, setShowFilters] = useState(false)
   const pageSize = LEADERBOARD_PAGE_SIZE
   const isFetchingRef = useRef(false)
 
@@ -87,14 +96,14 @@ export const Leaderboard: React.FC = () => {
 
       if (allUsernames.length === 0) {
         console.log("No usernames found")
-        setAllTippedJars([])
+        setAllJars([])
         setDisplayedJars([])
         isFetchingRef.current = false
         return
       }
 
-      // Fetch jar info with better error handling
-      const jarPromises = allUsernames.map(async (username) => {
+      // Fetch jar info with better error handling - now including ALL jars
+      const jarPromises = allUsernames.map(async (username, originalIndex) => {
         try {
           // Add a small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 50))
@@ -106,12 +115,11 @@ export const Leaderboard: React.FC = () => {
             const totalReceived = Number.parseFloat(ethers.formatEther(jarInfo[2]))
             console.log(`Jar ${username}: ${totalReceived} MON`)
             
-            // Only return jars that have received tips
-            if (totalReceived > 0) {
-              return {
-                username,
-                totalReceived,
-              }
+            // Return ALL jars, not just ones with tips
+            return {
+              username,
+              totalReceived,
+              createdAt: originalIndex, // Use index as proxy for creation order
             }
           }
           return null
@@ -124,36 +132,73 @@ export const Leaderboard: React.FC = () => {
 
       const jarResults = await Promise.all(jarPromises)
       
-      // Filter out null results and sort by totalReceived
-      const tippedJars = jarResults
+      // Filter out null results and apply initial sorting
+      const allValidJars = jarResults
         .filter((jar): jar is JarData => jar !== null)
-        .sort((a, b) => b.totalReceived - a.totalReceived)
-        .map((jar, index) => ({
-          ...jar,
-          rank: index + 1
-        }))
 
-      console.log(`Total tipped jars: ${tippedJars.length}`)
-      setDebugInfo(`Found ${allUsernames.length} usernames, ${tippedJars.length} have tips`)
+      console.log(`Total valid jars: ${allValidJars.length}`)
+      setDebugInfo(`Found ${allUsernames.length} usernames, ${allValidJars.length} valid jars`)
 
-      setAllTippedJars(tippedJars)
-      
-      // Display first page
-      const firstPage = tippedJars.slice(0, pageSize)
-      setDisplayedJars(firstPage)
-      setPage(1)
+      setAllJars(allValidJars)
       
     } catch (err: any) {
       console.error("Error fetching jars:", err)
       setError(err.message || "Failed to fetch jars")
       setDebugInfo(`Error: ${err.message}`)
-      setAllTippedJars([])
+      setAllJars([])
       setDisplayedJars([])
     } finally {
       setIsLoading(false)
       isFetchingRef.current = false
     }
   }, [])
+
+  // Sort and paginate jars based on current sort option
+  const sortAndPaginateJars = useCallback((jars: JarData[], sortOption: SortOption, pageNum: number) => {
+    let sortedJars = [...jars]
+    
+    switch (sortOption) {
+      case 'tips_desc':
+        sortedJars.sort((a, b) => b.totalReceived - a.totalReceived)
+        break
+      case 'tips_asc':
+        sortedJars.sort((a, b) => a.totalReceived - b.totalReceived)
+        break
+      case 'newest':
+        sortedJars.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        break
+      case 'oldest':
+        sortedJars.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+        break
+    }
+    
+    // Add rank based on sorted order (only for tips sorting)
+    if (sortOption === 'tips_desc') {
+      sortedJars = sortedJars.map((jar, index) => ({
+        ...jar,
+        rank: index + 1
+      }))
+    } else {
+      // Remove rank for other sorting options
+      sortedJars = sortedJars.map(jar => {
+        const { rank, ...jarWithoutRank } = jar
+        return jarWithoutRank
+      })
+    }
+    
+    // Paginate
+    const startIndex = 0
+    const endIndex = pageNum * pageSize
+    return sortedJars.slice(startIndex, endIndex)
+  }, [pageSize])
+
+  // Update displayed jars when sort option changes
+  useEffect(() => {
+    if (allJars.length > 0) {
+      const sorted = sortAndPaginateJars(allJars, sortBy, page)
+      setDisplayedJars(sorted)
+    }
+  }, [allJars, sortBy, page, sortAndPaginateJars])
 
   // Initial load - ensure it only runs once
   useEffect(() => {
@@ -172,24 +217,25 @@ export const Leaderboard: React.FC = () => {
     }
   }, []) // Remove fetchAllJars from dependencies to prevent re-runs
 
+  const handleSortChange = (newSort: SortOption) => {
+    setSortBy(newSort)
+    setPage(1) // Reset to first page when sorting changes
+  }
+
   const handleLoadMore = () => {
     const nextPage = page + 1
-    const startIndex = (nextPage - 1) * pageSize
-    const endIndex = startIndex + pageSize
-    const nextJars = allTippedJars.slice(0, endIndex)
-    
-    setDisplayedJars(nextJars)
     setPage(nextPage)
   }
 
   const handleRefresh = async () => {
     // Clear existing data before refresh
-    setAllTippedJars([])
+    setAllJars([])
     setDisplayedJars([])
+    setPage(1)
     await fetchAllJars()
   }
 
-  const hasMore = displayedJars.length < allTippedJars.length
+  const hasMore = displayedJars.length < allJars.length
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -204,6 +250,34 @@ export const Leaderboard: React.FC = () => {
     }
   }
 
+  const getSortIcon = (currentSort: SortOption) => {
+    switch (currentSort) {
+      case 'tips_desc':
+        return <ArrowDown className="w-4 h-4" />
+      case 'tips_asc':
+        return <ArrowUp className="w-4 h-4" />
+      case 'newest':
+        return <ArrowDown className="w-4 h-4" />
+      case 'oldest':
+        return <ArrowUp className="w-4 h-4" />
+      default:
+        return <ArrowUpDown className="w-4 h-4" />
+    }
+  }
+
+  const getSortLabel = (sortOption: SortOption) => {
+    switch (sortOption) {
+      case 'tips_desc':
+        return 'Most Tips'
+      case 'tips_asc':
+        return 'Least Tips'
+      case 'newest':
+        return 'Newest First'
+      case 'oldest':
+        return 'Oldest First'
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="bg-gradient-to-b from-violet-50 to-white min-h-screen py-16">
@@ -211,7 +285,7 @@ export const Leaderboard: React.FC = () => {
           <div className="flex justify-center items-center py-24">
             <div className="text-center">
               <Spinner size="lg" className="text-violet-600" />
-              <p className="mt-6 text-lg text-gray-600">Loading top tip jars...</p>
+              <p className="mt-6 text-lg text-gray-600">Loading all tip jars...</p>
               <p className="mt-2 text-sm text-gray-500">{debugInfo}</p>
             </div>
           </div>
@@ -255,18 +329,18 @@ export const Leaderboard: React.FC = () => {
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-indigo-600">
-              Top Tip Jars
+              All Tip Jars
             </span>
           </h1>
           <div className="flex justify-center mt-4 mb-6">
             <Award className="text-yellow-400 w-10 h-10" />
           </div>
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
-            Discover the most popular tip jars on MonTip and see who's receiving the most support
+            Discover all tip jars on MonTip and see who's receiving support from their community
           </p>
-          {allTippedJars.length > 0 && (
+          {allJars.length > 0 && (
             <p className="mt-2 text-sm text-gray-500">
-              Showing {displayedJars.length} of {allTippedJars.length} tip jars
+              Showing {displayedJars.length} of {allJars.length} tip jars
             </p>
           )}
         </div>
@@ -274,17 +348,89 @@ export const Leaderboard: React.FC = () => {
         <Card className="border-0 rounded-xl shadow-lg overflow-hidden mb-16">
           <div className="h-2 bg-gradient-to-r from-violet-500 to-indigo-500"></div>
           <CardHeader className="border-b border-gray-100 bg-white">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-xl font-bold text-gray-900">Leaderboard</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                className="text-violet-600 hover:text-violet-700"
-              >
-                Refresh
-              </Button>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle className="text-xl font-bold text-gray-900">All Tip Jars</CardTitle>
+              
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                {/* Sort Options */}
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="rounded-full border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 w-full sm:w-auto"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    {getSortLabel(sortBy)}
+                    {getSortIcon(sortBy)}
+                  </Button>
+                  
+                  {showFilters && (
+                    <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            handleSortChange('tips_desc')
+                            setShowFilters(false)
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-violet-50 transition-colors flex items-center justify-between ${
+                            sortBy === 'tips_desc' ? 'bg-violet-50 text-violet-700' : 'text-gray-700'
+                          }`}
+                        >
+                          Most Tips First
+                          <ArrowDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleSortChange('tips_asc')
+                            setShowFilters(false)
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-violet-50 transition-colors flex items-center justify-between ${
+                            sortBy === 'tips_asc' ? 'bg-violet-50 text-violet-700' : 'text-gray-700'
+                          }`}
+                        >
+                          Least Tips First
+                          <ArrowUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleSortChange('newest')
+                            setShowFilters(false)
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-violet-50 transition-colors flex items-center justify-between ${
+                            sortBy === 'newest' ? 'bg-violet-50 text-violet-700' : 'text-gray-700'
+                          }`}
+                        >
+                          Newest First
+                          <ArrowDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleSortChange('oldest')
+                            setShowFilters(false)
+                          }}
+                          className={`w-full text-left px-4 py-2 hover:bg-violet-50 transition-colors flex items-center justify-between ${
+                            sortBy === 'oldest' ? 'bg-violet-50 text-violet-700' : 'text-gray-700'
+                          }`}
+                        >
+                          Oldest First
+                          <ArrowUp className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="text-violet-600 hover:text-violet-700 rounded-full hover:bg-violet-50 transition-all duration-200"
+                >
+                  Refresh
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -294,12 +440,14 @@ export const Leaderboard: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 text-left">
-                        <th
-                          scope="col"
-                          className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16"
-                        >
-                          Rank
-                        </th>
+                        {sortBy === 'tips_desc' && (
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16"
+                          >
+                            Rank
+                          </th>
+                        )}
                         <th
                           scope="col"
                           className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
@@ -321,24 +469,28 @@ export const Leaderboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {displayedJars.map((jar) => (
+                      {displayedJars.map((jar, index) => (
                         <tr
-                          key={`${jar.username}-${jar.rank}`}
-                          className={`hover:bg-violet-50 transition-colors ${jar.rank && jar.rank <= 3 ? "bg-violet-50" : ""}`}
+                          key={`${jar.username}-${index}`}
+                          className={`hover:bg-violet-50 transition-colors ${
+                            jar.rank && jar.rank <= 3 ? "bg-violet-50" : jar.totalReceived === 0 ? "bg-gray-50" : ""
+                          }`}
                         >
-                          <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-center">
-                            <div className="flex justify-center items-center">
-                              {jar.rank && jar.rank <= 3 ? (
-                                <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                                  {getRankIcon(jar.rank)}
-                                </div>
-                              ) : (
-                                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                  {getRankIcon(jar.rank!)}
-                                </div>
-                              )}
-                            </div>
-                          </td>
+                          {sortBy === 'tips_desc' && (
+                            <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-center">
+                              <div className="flex justify-center items-center">
+                                {jar.rank && jar.rank <= 3 ? (
+                                  <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                                    {getRankIcon(jar.rank)}
+                                  </div>
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                    {jar.rank ? getRankIcon(jar.rank) : <span className="text-sm font-medium">{index + 1}</span>}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          )}
                           <td className="px-6 py-5 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
@@ -346,6 +498,9 @@ export const Leaderboard: React.FC = () => {
                               </div>
                               <div className="ml-4">
                                 <div className="text-base font-semibold text-gray-900">@{jar.username}</div>
+                                {jar.totalReceived === 0 && (
+                                  <div className="text-xs text-gray-500 mt-1">No tips yet</div>
+                                )}
                                 {jar.rank && jar.rank <= 3 && (
                                   <div className="text-xs text-violet-600 mt-1 font-medium">
                                     {jar.rank === 1 ? "Top Earner" : jar.rank === 2 ? "Rising Star" : "Popular Creator"}
@@ -355,7 +510,9 @@ export const Leaderboard: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-5 whitespace-nowrap text-base text-gray-900 text-right font-semibold">
-                            {formatMON(jar.totalReceived)}
+                            <span className={jar.totalReceived === 0 ? "text-gray-400" : ""}>
+                              {formatMON(jar.totalReceived)}
+                            </span>
                           </td>
                           <td className="px-6 py-5 whitespace-nowrap text-center">
                             <Link to={`/jar/${jar.username}`}>
@@ -381,14 +538,14 @@ export const Leaderboard: React.FC = () => {
                       onClick={handleLoadMore}
                       className="px-6 py-2 rounded-full border-2 border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200"
                     >
-                      Load More ({allTippedJars.length - displayedJars.length} remaining)
+                      Load More ({allJars.length - displayedJars.length} remaining)
                     </Button>
                   </div>
                 )}
 
                 {!hasMore && displayedJars.length > 0 && (
                   <p className="py-6 text-center text-sm text-gray-500">
-                    Showing all {allTippedJars.length} tip jars with tips
+                    Showing all {allJars.length} tip jars
                   </p>
                 )}
               </>
@@ -399,7 +556,7 @@ export const Leaderboard: React.FC = () => {
                     <Trophy className="text-violet-500 w-8 h-8" />
                   </div>
                 </div>
-                <p className="text-gray-600 mb-2 text-lg">No tip jars with tips found</p>
+                <p className="text-gray-600 mb-2 text-lg">No tip jars found</p>
                 <p className="text-sm text-gray-500 mb-6">{debugInfo}</p>
                 <div className="space-y-3">
                   <Button 
@@ -427,8 +584,7 @@ export const Leaderboard: React.FC = () => {
             <CardContent className="p-8">
               <h3 className="text-xl font-bold text-gray-900 mb-6">How to Get on the Leaderboard</h3>
               <p className="text-gray-600 mb-6">
-                The leaderboard ranks tip jars by the total amount of MON they've received. Here are some ways to climb
-                the ranks:
+                All tip jars are shown here, but you can climb the rankings by receiving more tips. Here are some ways to get more support:
               </p>
               <div className="grid gap-4 md:grid-cols-2 mb-6">
                 {[
