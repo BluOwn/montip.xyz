@@ -102,39 +102,90 @@ export const Leaderboard: React.FC = () => {
         return
       }
 
-      // Fetch jar info with better error handling - now including ALL jars
-      const jarPromises = allUsernames.map(async (username, originalIndex) => {
-        try {
-          // Add a small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 50))
-          
-          const jarInfo = await contract.getJarInfo(username)
-          const exists = jarInfo[0] !== ethers.ZeroAddress
-          
-          if (exists) {
-            const totalReceived = Number.parseFloat(ethers.formatEther(jarInfo[2]))
-            console.log(`Jar ${username}: ${totalReceived} MON`)
+      // Fetch jar info with retry logic and better error handling
+      const fetchJarWithRetry = async (username: string, originalIndex: number, maxRetries = 3): Promise<JarData | null> => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            // Progressive delay: 100ms, 200ms, 400ms
+            const delay = 100 * attempt
+            await new Promise(resolve => setTimeout(resolve, delay))
             
-            // Return ALL jars, not just ones with tips
-            return {
-              username,
-              totalReceived,
-              createdAt: originalIndex, // Use index as proxy for creation order
+            const jarInfo = await contract.getJarInfo(username)
+            const exists = jarInfo[0] !== ethers.ZeroAddress
+            
+            if (exists) {
+              const totalReceived = Number.parseFloat(ethers.formatEther(jarInfo[2]))
+              console.log(`Jar ${username}: ${totalReceived} MON`)
+              
+              // Return ALL jars, not just ones with tips
+              return {
+                username,
+                totalReceived,
+                createdAt: originalIndex, // Use index as proxy for creation order
+              }
             }
+            return null
+          } catch (err) {
+            console.error(`Error fetching jar info for ${username} (attempt ${attempt}/${maxRetries}):`, err)
+            
+            // If this is the last attempt, return null
+            if (attempt === maxRetries) {
+              // For network errors, try to return a basic jar entry
+              if (err instanceof Error && (
+                err.message.includes('missing revert data') || 
+                err.message.includes('network') ||
+                err.message.includes('timeout') ||
+                err.message.includes('CALL_EXCEPTION')
+              )) {
+                console.log(`Creating fallback entry for ${username} due to network error`)
+                return {
+                  username,
+                  totalReceived: 0, // Default to 0 tips for network errors
+                  createdAt: originalIndex,
+                }
+              }
+              return null
+            }
+            
+            // Wait before retry with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 200 * attempt))
           }
-          return null
-        } catch (err) {
-          console.error(`Error fetching jar info for ${username}:`, err)
-          // Return null instead of throwing to continue with other jars
-          return null
         }
-      })
+        return null
+      }
 
-      const jarResults = await Promise.all(jarPromises)
+      // Process jars in smaller batches to reduce network load
+      const batchSize = 2
+      const allValidJars: JarData[] = []
       
-      // Filter out null results and apply initial sorting
-      const allValidJars = jarResults
-        .filter((jar): jar is JarData => jar !== null)
+      for (let i = 0; i < allUsernames.length; i += batchSize) {
+        const batch = allUsernames.slice(i, i + batchSize)
+        const batchPromises = batch.map((username, batchIndex) => 
+          fetchJarWithRetry(username, i + batchIndex)
+        )
+        
+        const batchResults = await Promise.allSettled(batchPromises)
+        
+        batchResults.forEach((result, batchIndex) => {
+          const globalIndex = i + batchIndex
+          if (result.status === 'fulfilled' && result.value !== null) {
+            allValidJars.push(result.value)
+          } else if (result.status === 'rejected') {
+            console.error(`Failed to fetch jar for ${allUsernames[globalIndex]}:`, result.reason)
+            // Create a fallback entry for failed requests
+            allValidJars.push({
+              username: allUsernames[globalIndex],
+              totalReceived: 0,
+              createdAt: globalIndex,
+            })
+          }
+        })
+        
+        // Small delay between batches
+        if (i + batchSize < allUsernames.length) {
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+      }
 
       console.log(`Total valid jars: ${allValidJars.length}`)
       setDebugInfo(`Found ${allUsernames.length} usernames, ${allValidJars.length} valid jars`)
