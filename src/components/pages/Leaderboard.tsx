@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/common/Card"
 import { Button } from "@/components/common/Button"
 import { Spinner } from "@/components/common/Spinner"
@@ -30,62 +30,60 @@ interface JarData {
 }
 
 export const Leaderboard: React.FC = () => {
-  const [jars, setJars] = useState<JarData[]>([])
+  const [allTippedJars, setAllTippedJars] = useState<JarData[]>([])
+  const [displayedJars, setDisplayedJars] = useState<JarData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const pageSize = LEADERBOARD_PAGE_SIZE
 
-  const fetchJars = async (pageNumber: number) => {
+  const fetchAllJars = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    
     try {
       const contract = getReadOnlyContract()
       
-      // First, get all usernames from the contract
-      let allUsernames: string[] = []
+      // Get all usernames from the contract
+      const allUsernames: string[] = []
       let index = 0
       
-      // Try to get usernames from allUsernames array
-      try {
-        while (true) {
-          try {
-            const username = await contract.allUsernames(index)
-            if (username && username.length > 0) {
-              allUsernames.push(username)
-              index++
-            } else {
-              break
-            }
-          } catch (err) {
-            // If we get an error, we've reached the end of the array
+      while (true) {
+        try {
+          const username = await contract.allUsernames(index)
+          if (username && username.length > 0) {
+            allUsernames.push(username)
+            index++
+          } else {
             break
           }
+        } catch (err) {
+          // Reached the end of the array
+          break
         }
-      } catch (err) {
-        console.log("Could not fetch from allUsernames array, trying alternative method")
       }
 
-      // If we couldn't get usernames from allUsernames, we need an alternative approach
       if (allUsernames.length === 0) {
-        console.log("No usernames found in allUsernames array")
-        setJars([])
-        setHasMore(false)
+        setAllTippedJars([])
+        setDisplayedJars([])
         return
       }
 
-      // Get jar info for each username and filter out non-existent jars
+      // Fetch all jar info in parallel
       const jarPromises = allUsernames.map(async (username) => {
         try {
           const jarInfo = await contract.getJarInfo(username)
           const exists = jarInfo[0] !== ethers.ZeroAddress
           
           if (exists) {
-            return {
-              username,
-              owner: jarInfo[0],
-              description: jarInfo[1],
-              totalReceived: Number.parseFloat(ethers.formatEther(jarInfo[2])),
+            const totalReceived = Number.parseFloat(ethers.formatEther(jarInfo[2]))
+            
+            // Only return jars that have received tips
+            if (totalReceived > 0) {
+              return {
+                username,
+                totalReceived,
+              }
             }
           }
           return null
@@ -96,73 +94,49 @@ export const Leaderboard: React.FC = () => {
       })
 
       const jarResults = await Promise.all(jarPromises)
-      const validJars = jarResults.filter(jar => jar !== null) as Array<{
-        username: string
-        owner: string
-        description: string
-        totalReceived: number
-      }>
+      
+      // Filter out null results and sort by totalReceived
+      const tippedJars = jarResults
+        .filter((jar): jar is JarData => jar !== null)
+        .sort((a, b) => b.totalReceived - a.totalReceived)
+        .map((jar, index) => ({
+          ...jar,
+          rank: index + 1
+        }))
 
-      // Sort jars by totalReceived in descending order
-      validJars.sort((a, b) => b.totalReceived - a.totalReceived)
-
-      // Filter to only show jars that have received tips (totalReceived > 0)
-      const tippedJars = validJars.filter(jar => jar.totalReceived > 0)
-
-      // Apply pagination
-      const offset = (pageNumber - 1) * pageSize
-      const paginatedJars = tippedJars.slice(offset, offset + pageSize)
-
-      const jarsData: JarData[] = paginatedJars.map((jar, index) => ({
-        username: jar.username,
-        totalReceived: jar.totalReceived,
-        rank: offset + index + 1,
-      }))
-
-      if (pageNumber === 1) {
-        setJars(jarsData)
-      } else {
-        setJars((prevJars) => [...prevJars, ...jarsData])
-      }
-
-      // Check if there are more jars to load
-      setHasMore(offset + paginatedJars.length < tippedJars.length)
+      setAllTippedJars(tippedJars)
+      
+      // Display first page
+      const firstPage = tippedJars.slice(0, pageSize)
+      setDisplayedJars(firstPage)
+      setPage(1)
+      
     } catch (err: any) {
       console.error("Error fetching jars:", err)
       setError(err.message || "Failed to fetch jars")
+      setAllTippedJars([])
+      setDisplayedJars([])
+    } finally {
+      setIsLoading(false)
     }
-  }
-
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        await fetchJars(1)
-      } catch (error) {
-        console.error("Error loading leaderboard:", error)
-        setError("Failed to load leaderboard data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadInitialData()
   }, [])
 
-  const handleLoadMore = async () => {
-    if (!hasMore || isLoadingMore) return
+  // Initial load
+  useEffect(() => {
+    fetchAllJars()
+  }, [fetchAllJars])
 
-    setIsLoadingMore(true)
-    try {
-      await fetchJars(page + 1)
-      setPage(page + 1)
-    } catch (error) {
-      console.error("Error loading more data:", error)
-    } finally {
-      setIsLoadingMore(false)
-    }
+  const handleLoadMore = () => {
+    const nextPage = page + 1
+    const startIndex = (nextPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    const nextJars = allTippedJars.slice(0, endIndex)
+    
+    setDisplayedJars(nextJars)
+    setPage(nextPage)
   }
+
+  const hasMore = displayedJars.length < allTippedJars.length
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -207,7 +181,7 @@ export const Leaderboard: React.FC = () => {
                 <h3 className="text-xl font-bold text-red-600 mb-3">Error Loading Leaderboard</h3>
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">{error}</p>
                 <Button
-                  onClick={() => window.location.reload()}
+                  onClick={() => fetchAllJars()}
                   className="px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 transition-all duration-200"
                 >
                   Try Again
@@ -235,15 +209,30 @@ export const Leaderboard: React.FC = () => {
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
             Discover the most popular tip jars on MonTip and see who's receiving the most support
           </p>
+          {allTippedJars.length > 0 && (
+            <p className="mt-2 text-sm text-gray-500">
+              Showing {displayedJars.length} of {allTippedJars.length} tip jars
+            </p>
+          )}
         </div>
 
         <Card className="border-0 rounded-xl shadow-lg overflow-hidden mb-16">
           <div className="h-2 bg-gradient-to-r from-violet-500 to-indigo-500"></div>
           <CardHeader className="border-b border-gray-100 bg-white">
-            <CardTitle className="text-xl font-bold text-gray-900">Leaderboard</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-xl font-bold text-gray-900">Leaderboard</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchAllJars}
+                className="text-violet-600 hover:text-violet-700"
+              >
+                Refresh
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            {jars.length > 0 ? (
+            {displayedJars.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -276,7 +265,7 @@ export const Leaderboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {jars.map((jar) => (
+                      {displayedJars.map((jar) => (
                         <tr
                           key={jar.username}
                           className={`hover:bg-violet-50 transition-colors ${jar.rank && jar.rank <= 3 ? "bg-violet-50" : ""}`}
@@ -334,17 +323,17 @@ export const Leaderboard: React.FC = () => {
                     <Button
                       variant="outline"
                       onClick={handleLoadMore}
-                      isLoading={isLoadingMore}
-                      disabled={isLoadingMore}
                       className="px-6 py-2 rounded-full border-2 border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200"
                     >
-                      Load More
+                      Load More ({allTippedJars.length - displayedJars.length} remaining)
                     </Button>
                   </div>
                 )}
 
-                {!hasMore && jars.length > 0 && (
-                  <p className="py-6 text-center text-sm text-gray-500">You've reached the end of the list</p>
+                {!hasMore && displayedJars.length > 0 && (
+                  <p className="py-6 text-center text-sm text-gray-500">
+                    Showing all {allTippedJars.length} tip jars with tips
+                  </p>
                 )}
               </>
             ) : (
