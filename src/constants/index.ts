@@ -1,5 +1,5 @@
 // Contract Address - Monad Testnet (Updated)
-export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x7BF5B55530BA2B5Eab6d806Ec2D678c57D0A945f";
+export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x7f003073a0b7763Fde2FdFf3E37Aa422EAb231d0";
 
 // Monad Network Configuration
 export const CHAIN_CONFIG = {

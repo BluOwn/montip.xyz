@@ -1,36 +1,54 @@
 // ABI will be passed in manually, just define the structure here
 export const CONTRACT_ABI = [
 	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			}
+		],
+		"name": "adminDeleteJar",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			}
+		],
+		"name": "createJar",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "deleteJar",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "emergencyWithdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "target",
-				"type": "address"
-			}
-		],
-		"name": "AddressEmptyCode",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "implementation",
-				"type": "address"
-			}
-		],
-		"name": "ERC1967InvalidImplementation",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "ERC1967NonPayable",
-		"type": "error"
 	},
 	{
 		"inputs": [],
@@ -40,21 +58,6 @@ export const CONTRACT_ABI = [
 	{
 		"inputs": [],
 		"name": "ExpectedPause",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "FailedCall",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "InvalidInitialization",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "NotInitializing",
 		"type": "error"
 	},
 	{
@@ -85,22 +88,6 @@ export const CONTRACT_ABI = [
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "UUPSUnauthorizedCallContext",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "slot",
-				"type": "bytes32"
-			}
-		],
-		"name": "UUPSUnsupportedProxiableUUID",
-		"type": "error"
-	},
-	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -125,7 +112,7 @@ export const CONTRACT_ABI = [
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "recipient",
+				"name": "owner",
 				"type": "address"
 			},
 			{
@@ -135,20 +122,7 @@ export const CONTRACT_ABI = [
 				"type": "uint256"
 			}
 		],
-		"name": "FeePaid",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "version",
-				"type": "uint64"
-			}
-		],
-		"name": "Initialized",
+		"name": "FeesWithdrawn",
 		"type": "event"
 	},
 	{
@@ -234,6 +208,13 @@ export const CONTRACT_ABI = [
 		"type": "event"
 	},
 	{
+		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -245,6 +226,31 @@ export const CONTRACT_ABI = [
 		],
 		"name": "Paused",
 		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			}
+		],
+		"name": "sendTip",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -309,6 +315,26 @@ export const CONTRACT_ABI = [
 		"type": "event"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -322,17 +348,54 @@ export const CONTRACT_ABI = [
 		"type": "event"
 	},
 	{
-		"anonymous": false,
-		"inputs": [
+		"inputs": [],
+		"name": "withdrawFailedTips",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawFees",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"stateMutability": "payable",
+		"type": "receive"
+	},
+	{
+		"inputs": [],
+		"name": "accumulatedFees",
+		"outputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "implementation",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
-		"name": "Upgraded",
-		"type": "event"
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "allUsernames",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -342,6 +405,292 @@ export const CONTRACT_ABI = [
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "failedTipAmounts",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAllUsernames",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAvailableFees",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			}
+		],
+		"name": "getJarInfo",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalReceived",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getPlatformFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			}
+		],
+		"name": "getRecentTips",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			}
+		],
+		"name": "getTipCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getTotalUsers",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getUserJar",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "offset",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "limit",
+				"type": "uint256"
+			}
+		],
+		"name": "getUsernamesPaginated",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "usernames",
+				"type": "string[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "total",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getVersion",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "hasJar",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "username",
+				"type": "string"
+			}
+		],
+		"name": "isUsernameAvailable",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"name": "jars",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalReceived",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "exists",
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -401,327 +750,6 @@ export const CONTRACT_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "PLATFORM_FEE_BASIS_POINTS",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "UPGRADE_INTERFACE_VERSION",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			}
-		],
-		"name": "adminDeleteJar",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "jarOwner",
-				"type": "address"
-			}
-		],
-		"name": "adminDeleteJarByOwner",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "allUsernames",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "description",
-				"type": "string"
-			}
-		],
-		"name": "createJar",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "deleteJar",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "failedTipAmounts",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "feeRecipient",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			}
-		],
-		"name": "getJarInfo",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "description",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "totalReceived",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			}
-		],
-		"name": "getRecentTips",
-		"outputs": [
-			{
-				"internalType": "address[]",
-				"name": "",
-				"type": "address[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "",
-				"type": "uint256[]"
-			},
-			{
-				"internalType": "string[]",
-				"name": "",
-				"type": "string[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "",
-				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			}
-		],
-		"name": "getTipCount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getUserJar",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getVersion",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "hasJar",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "initialize",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			}
-		],
-		"name": "isUsernameAvailable",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"name": "jars",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "owner",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "description",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "totalReceived",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "exists",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "owner",
 		"outputs": [
 			{
@@ -754,13 +782,6 @@ export const CONTRACT_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "pause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "paused",
 		"outputs": [
 			{
@@ -774,53 +795,15 @@ export const CONTRACT_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "proxiableUUID",
+		"name": "PLATFORM_FEE_BASIS_POINTS",
 		"outputs": [
 			{
-				"internalType": "bytes32",
+				"internalType": "uint256",
 				"name": "",
-				"type": "bytes32"
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "username",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "message",
-				"type": "string"
-			}
-		],
-		"name": "sendTip",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newFeeRecipient",
-				"type": "address"
-			}
-		],
-		"name": "setFeeRecipient",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -863,44 +846,6 @@ export const CONTRACT_ABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "unpause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newImplementation",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "upgradeToAndCall",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "websiteURL",
 		"outputs": [
@@ -911,13 +856,6 @@ export const CONTRACT_ABI = [
 			}
 		],
 		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "withdrawFailedTips",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ] as const;

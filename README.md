@@ -46,7 +46,7 @@ MonTip is a decentralized tipping platform built on the Monad Network that allow
 
 3. Create a `.env` file in the root directory with the following content:
    ```
-   VITE_CONTRACT_ADDRESS=0x575b42faBddE672379FBe67D0fb25DCaA8432061
+   VITE_CONTRACT_ADDRESS=0x7f003073a0b7763Fde2FdFf3E37Aa422EAb231d0
    ```
 
 4. Start the development server:
@@ -76,9 +76,9 @@ To use MonTip, you need to configure your MetaMask wallet to connect to the Mona
 
 ## Contract Information
 
-- Contract Address: `0x575b42faBddE672379FBe67D0fb25DCaA8432061`
+- Contract Address: `0x7f003073a0b7763Fde2FdFf3E37Aa422EAb231d0`
 - Network: Monad Testnet
-- View on Block Explorer: [Monad Explorer](https://testnet.monadexplorer.com/address/0x575b42faBddE672379FBe67D0fb25DCaA8432061)
+- View on Block Explorer: [Monad Explorer](https://testnet.monadexplorer.com/address/0x7f003073a0b7763Fde2FdFf3E37Aa422EAb231d0)
 
 ## Security Considerations
 
