@@ -57,7 +57,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="https://testnet.monadexplorer.com/address/0x7BF5B55530BA2B5Eab6d806Ec2D678c57D0A945f"
+                  href="https://testnet.monadexplorer.com/address/0x7f003073a0b7763Fde2FdFf3E37Aa422EAb231d0"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-600 hover:text-violet-600 transition-colors flex items-center group"
